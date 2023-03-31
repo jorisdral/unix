@@ -180,9 +180,16 @@ data OpenFileFlags =
     directory :: Bool,           -- ^ O_DIRECTORY
                                  --
                                  -- @since 2.8.0.0
-    sync      :: Bool            -- ^ O_SYNC
+    sync      :: Bool,           -- ^ O_SYNC
                                  --
                                  -- @since 2.8.0.0
+    direct    :: Bool            -- ^ O_DIRECT
+                                 --
+                                 -- @since 2.8.1.1 fork
+                                 --
+                                 -- __NOTE__: Buffer addresses and size have to
+                                 -- be aligned to the system block size, or
+                                 -- segfaults will arise.
  }
  deriving (Read, Show, Eq, Ord)
 
@@ -203,7 +210,8 @@ defaultFileFlags =
     creat     = Nothing,
     cloexec   = False,
     directory = False,
-    sync      = False
+    sync      = False,
+    direct    = False
   }
 
 
@@ -217,7 +225,7 @@ openat_  :: Maybe Fd -- ^ Optional directory file descriptor
 openat_ fdMay str how (OpenFileFlags appendFlag exclusiveFlag nocttyFlag
                                 nonBlockFlag truncateFlag nofollowFlag
                                 creatFlag cloexecFlag directoryFlag
-                                syncFlag) =
+                                syncFlag directFlag) =
     Fd <$> c_openat c_fd str all_flags mode_w
   where
     c_fd = maybe (#const AT_FDCWD) (\ (Fd fd) -> fd) fdMay
@@ -232,7 +240,8 @@ openat_ fdMay str how (OpenFileFlags appendFlag exclusiveFlag nocttyFlag
        (if nofollowFlag     then (#const O_NOFOLLOW)  else 0) .|.
        (if cloexecFlag      then (#const O_CLOEXEC)   else 0) .|.
        (if directoryFlag    then (#const O_DIRECTORY) else 0) .|.
-       (if syncFlag         then (#const O_SYNC)      else 0)
+       (if syncFlag         then (#const O_SYNC)      else 0) .|.
+       (if directFlag       then (#const O_DIRECT)    else 0)
 
     (creat, mode_w) = case creatFlag of
                         Nothing -> (0,0)
